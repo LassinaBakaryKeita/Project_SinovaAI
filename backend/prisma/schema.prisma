@@ -1,0 +1,156 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// USER
+
+enum AuthProvider {
+  LOCAL
+  GOOGLE
+}
+
+model User {
+  id Int @id @default(autoincrement())
+
+  name String
+
+  email String @unique
+
+  password String?
+
+  googleId String? @unique
+
+  photo String?
+
+  authProvider AuthProvider @default(LOCAL)
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  activities              UserActivity[]
+  searchHistories         SearchHistory[]
+  recommendationFeedbacks RecommendationFeedback[]
+}
+
+// RESSOURCE
+
+model Ressource {
+  id               Int    @id @default(autoincrement())
+  titre            String
+  description      String
+  duree            Int
+  source           String
+  popularity       Int    @default(0)
+  proprietaire     String
+  niveauDifficulte String @map("niveau_difficulte")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  activities              UserActivity[]
+  recommendationFeedbacks RecommendationFeedback[]
+
+  @@map("ressource")
+}
+
+// USER ACTIVITY
+
+model UserActivity {
+  id Int @id @default(autoincrement())
+
+  userId      Int @map("user_id")
+  ressourceId Int @map("ressource_id")
+
+  dateConsultation DateTime @default(now()) @map("date_consultation")
+
+  tempsPasse Int @default(0) @map("temps_passe")
+
+  nombreQuestionIA Int @default(0) @map("nombre_question_ia")
+
+  estFavori Boolean @default(false) @map("est_favori")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  ressource Ressource @relation(fields: [ressourceId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([ressourceId])
+  @@map("user_activity")
+}
+
+// SEARCH HISTORY
+
+model SearchHistory {
+  id Int @id @default(autoincrement())
+
+  userId Int @map("user_id")
+
+  motCle String @map("mot_cle")
+
+  dateRecherche DateTime @default(now()) @map("date_recherche")
+
+  typeRecherche String @map("type_recherche")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("search_history")
+}
+
+// RECOMMENDATION FEEDBACK
+
+model RecommendationFeedback {
+  id Int @id @default(autoincrement())
+
+  userId Int @map("user_id")
+
+  ressourceId Int @map("ressource_id")
+
+  clique Boolean @default(false)
+
+  visionComplete Boolean @default(false) @map("vision_complete")
+
+  aime Boolean @default(false)
+
+  tempsVisionnage Int @default(0) @map("temps_visionnage_secondes")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  ressource Ressource @relation(fields: [ressourceId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([ressourceId])
+  @@map("recommendation_feedback")
+}
+
+
+
+// Technology
+
+model Technology {
+  id                      Int      @id @default(autoincrement())
+
+  name                    String   @unique
+
+  slug                    String   @unique
+
+  category                String
+
+  description             String
+
+  officialDocumentation   String
+
+  officialWebsite         String
+
+  logo                    String
+
+}
+
+

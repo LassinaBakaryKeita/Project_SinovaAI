@@ -1,0 +1,262 @@
+/* Footer global */
+.sinova-footer {
+  width: 100%;
+  background-color: rgb(40, 41, 62);
+  border-top: 1px solid rgb(69, 73, 110);
+  font-family: 'Inter', sans-serif;
+  box-sizing: border-box;
+}
+
+/* Bandeau défilant */
+.sinova-footer-tagline {
+  width: 100%;
+  border-bottom: 1px solid rgb(69, 73, 110);
+  overflow: hidden;
+  padding: 20px 0;
+  position: relative;
+}
+
+.sinova-footer-tagline-track {
+  display: flex;
+  gap: 48px;
+  width: max-content;
+  animation: sinova-scroll-left 22s linear infinite;
+}
+
+.sinova-footer-tagline-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  white-space: nowrap;
+}
+
+.sinova-footer-tagline-item span {
+  font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
+  font-weight: 700;
+  font-size: 1.1rem;
+  letter-spacing: -0.2px;
+}
+
+.sinova-footer-tagline-item span.white {
+  color: #ffffff;
+}
+
+.sinova-footer-tagline-item span.accent {
+  color: rgb(238, 99, 78);
+}
+
+@keyframes sinova-scroll-left {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-33.3333%);
+  }
+}
+
+.sinova-footer-tagline:hover .sinova-footer-tagline-track {
+  animation-play-state: paused;
+}
+
+/* Corps principal */
+.sinova-footer-body {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 72px 24px 48px;
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
+  gap: 48px;
+  box-sizing: border-box;
+}
+
+/* Colonne marque */
+.sinova-footer-brand {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.sinova-footer-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sinova-footer-logo-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  background-color: rgb(238, 99, 78);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.sinova-footer-logo-text {
+  font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
+  font-weight: 700;
+  font-size: 1.2rem;
+  color: #ffffff;
+}
+
+.sinova-footer-logo-text span {
+  color: rgb(53, 228, 253);
+}
+
+.sinova-footer-desc {
+  font-size: 0.9rem;
+  line-height: 1.7em;
+  color: rgb(150, 152, 180);
+  margin: 0;
+  max-width: 280px;
+}
+
+.sinova-footer-socials {
+  display: flex;
+  gap: 12px;
+}
+
+.sinova-footer-social-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1px solid rgb(69, 73, 110);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgb(150, 152, 180);
+  text-decoration: none;
+  transition: border-color 0.2s ease, color 0.2s ease;
+}
+
+.sinova-footer-social-btn:hover {
+  border-color: rgb(238, 99, 78);
+  color: rgb(238, 99, 78);
+}
+
+/* Colonnes de liens */
+.sinova-footer-col {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.sinova-footer-col h4 {
+  font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: #ffffff;
+  margin: 0;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.sinova-footer-col-links {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sinova-footer-col-links a {
+  font-size: 0.875rem;
+  color: rgb(150, 152, 180);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.sinova-footer-col-links a:hover {
+  color: #ffffff;
+}
+
+/* Bas de page */
+.sinova-footer-bottom {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px 24px 32px;
+  border-top: 1px solid rgb(69, 73, 110);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  box-sizing: border-box;
+}
+
+.sinova-footer-copyright {
+  font-size: 0.82rem;
+  color: rgb(120, 122, 150);
+}
+
+.sinova-footer-copyright strong {
+  color: rgb(186, 188, 210);
+}
+
+.sinova-footer-legal-links {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.sinova-footer-legal-links a {
+  font-size: 0.82rem;
+  color: rgb(120, 122, 150);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.sinova-footer-legal-links a:hover {
+  color: rgb(186, 188, 210);
+}
+
+.sinova-footer-ai-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  color: rgb(120, 122, 150);
+}
+
+.sinova-footer-ai-badge .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: rgb(53, 228, 253);
+  box-shadow: 0 0 6px rgb(53, 228, 253);
+}
+
+.sinova-footer-ai-badge strong {
+  color: rgb(53, 228, 253);
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .sinova-footer-body {
+    grid-template-columns: 1fr 1fr;
+    gap: 36px 24px;
+  }
+  .sinova-footer-brand {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 560px) {
+  .sinova-footer-body {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+  .sinova-footer-brand {
+    grid-column: span 1;
+  }
+  .sinova-footer-bottom {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+  }
+  .sinova-footer-legal-links {
+    gap: 14px;
+  }
+  .sinova-footer-tagline-track {
+    gap: 28px;
+  }
+}

@@ -1,0 +1,252 @@
+.explorer-hero {
+  width: 100%;
+  background-color: rgb(40, 41, 62);
+  padding: 64px 24px 56px;
+  box-sizing: border-box;
+  display: flex;
+  justify-content: center;
+}
+
+.explorer-hero-container {
+  width: 100%;
+  max-width: 800px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 20px;
+}
+
+/* Badge */
+.explorer-hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: 100px;
+  background-color: rgba(238, 99, 78, 0.1);
+  border: 1px solid rgba(238, 99, 78, 0.25);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: rgb(238, 99, 78);
+}
+
+/* Titre */
+.explorer-hero-title {
+  margin: 0;
+  font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
+  font-weight: 800;
+  font-size: clamp(2rem, 4.5vw, 2.8rem);
+  line-height: 1.2em;
+  color: #ffffff;
+  letter-spacing: -0.5px;
+}
+
+/* Sous-titre */
+.explorer-hero-subtitle {
+  margin: 0;
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+  font-size: 1rem;
+  line-height: 1.6em;
+  color: rgb(186, 188, 210);
+}
+
+/* Barre de recherche */
+.explorer-search-bar {
+  width: 100%;
+  max-width: 620px;
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: rgb(51, 54, 81);
+  border: 1px solid rgb(69, 73, 110);
+  border-radius: 100px;
+  padding: 8px 8px 8px 24px;
+  box-sizing: border-box;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+  transition: border-color 0.3s ease;
+}
+
+.explorer-search-bar:focus-within {
+  border-color: rgb(238, 99, 78);
+}
+
+.explorer-search-icon {
+  flex-shrink: 0;
+}
+
+.explorer-search-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: 'Inter', sans-serif;
+  font-weight: 500;
+  font-size: 1rem;
+  color: #ffffff;
+  min-width: 0;
+}
+
+.explorer-search-input::placeholder {
+  color: rgb(150, 152, 180);
+}
+
+/* Bouton effacer */
+.explorer-clear-btn {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: rgba(255, 255, 255, 0.06);
+  border: none;
+  border-radius: 50%;
+  color: rgb(150, 152, 180);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.explorer-clear-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+}
+
+.explorer-clear-btn svg {
+  stroke: currentColor;
+  stroke-width: 2;
+}
+
+/* Bouton rechercher */
+.explorer-search-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background-color: rgb(238, 99, 78);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.explorer-search-btn:hover {
+  background-color: rgb(240, 120, 101);
+  transform: scale(1.05);
+}
+
+/* Tags populaires */
+.explorer-tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px 12px;
+  margin-top: 4px;
+}
+
+.explorer-tags-label {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.8rem;
+  color: rgb(150, 152, 180);
+  font-weight: 500;
+}
+
+.explorer-tag {
+  padding: 6px 16px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 20px;
+  color: rgb(186, 188, 210);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.explorer-tag:hover {
+  background: rgba(238, 99, 78, 0.08);
+  border-color: rgba(238, 99, 78, 0.25);
+  color: rgb(238, 99, 78);
+  transform: translateY(-1px);
+}
+
+.explorer-tag:active {
+  transform: translateY(0);
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .explorer-hero {
+    padding: 48px 20px 40px;
+  }
+  .explorer-search-bar {
+    padding: 6px 6px 6px 16px;
+  }
+  .explorer-search-input {
+    font-size: 0.9rem;
+  }
+  .explorer-search-btn {
+    width: 40px;
+    height: 40px;
+  }
+  .explorer-search-btn svg {
+    width: 16px;
+    height: 16px;
+  }
+  .explorer-clear-btn {
+    width: 28px;
+    height: 28px;
+  }
+  .explorer-tags {
+    gap: 6px 10px;
+  }
+  .explorer-tag {
+    padding: 4px 12px;
+    font-size: 0.75rem;
+  }
+  .explorer-tags-label {
+    font-size: 0.75rem;
+  }
+}
+
+/* Panneau Assistant IA - scroll interne */
+.video-assistant-card {
+  display: flex;
+  flex-direction: column;
+  height: 640px;
+  max-height: 80vh;
+  overflow: hidden;
+}
+
+.video-assistant-header,
+.video-assistant-actions,
+.video-assistant-input-row {
+  flex: 0 0 auto;
+}
+
+.video-assistant-chat {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.video-assistant-chat::-webkit-scrollbar {
+  width: 6px;
+}
+
+.video-assistant-chat::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+}
+
+.video-assistant-chat::-webkit-scrollbar-track {
+  background: transparent;
+}

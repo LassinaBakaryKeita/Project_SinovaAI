@@ -1,0 +1,113 @@
+.how-it-works {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 48px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  box-sizing: border-box;
+}
+
+/* En-tête */
+.how-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  text-align: center;
+}
+
+.how-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: 100px;
+  background-color: rgba(53, 228, 253, 0.08);
+  border: 1px solid rgba(53, 228, 253, 0.22);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: rgb(53, 228, 253);
+}
+
+.how-section-title {
+  margin: 0;
+  font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
+  font-weight: 700;
+  text-align: center;
+  font-size: clamp(1.8rem, 3vw, 2.8rem);
+  line-height: 1.2em;
+  color: #ffffff;
+  max-width: 640px;
+}
+
+.how-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+}
+
+.how-card {
+  background-color: rgb(51, 54, 81);
+  border-radius: 20px;
+  padding: 32px 28px;
+  border: 1px solid rgb(69, 73, 110);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  box-sizing: border-box;
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+
+.how-card:hover {
+  border-color: rgba(238, 99, 78, 0.4);
+  transform: translateY(-4px);
+}
+
+.how-card-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  background-color: rgba(238, 99, 78, 0.1);
+  border: 1px solid rgba(238, 99, 78, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.how-card-title {
+  margin: 0;
+  font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
+  font-weight: 700;
+  font-size: 1.1rem;
+  line-height: 1.4em;
+  color: #ffffff;
+}
+
+.how-card-desc {
+  margin: 0;
+  font-family: 'Inter', sans-serif;
+  font-weight: 400;
+  font-size: 0.92rem;
+  line-height: 1.65em;
+  color: rgb(186, 188, 210);
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .how-cards-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 560px) {
+  .how-cards-grid {
+    grid-template-columns: 1fr;
+  }
+  .how-section-title {
+    font-size: 1.5rem;
+  }
+}
