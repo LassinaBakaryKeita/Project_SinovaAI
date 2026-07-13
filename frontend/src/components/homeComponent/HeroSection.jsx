@@ -105,7 +105,7 @@ function DemoVideoModal({ onClose }) {
         <div className="sinova-demo-modal-video-wrapper">
          
             <iframe
-              src="https://youtu.be/MvI80_7sn2Q"
+              src="https://www.youtube.com/watch?v=MvI80_7sn2Q&t=73s"
               title="Démo SinovaAI"
               frameBorder="0"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
