@@ -103,22 +103,26 @@ function DemoVideoModal({ onClose }) {
         </button>
 
         <div className="sinova-demo-modal-video-wrapper">
-         
-            <iframe
-              src="https://www.youtube.com/watch?v=MvI80_7sn2Q&t=73s"
-              title="Démo SinovaAI"
-              frameBorder="0"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-            />
-            
-          <div className="sinova-demo-modal-placeholder">
-            <svg width="56" height="56" viewBox="0 0 56 56" fill="none">
-              <circle cx="28" cy="28" r="28" fill="rgba(238,99,78,0.15)" />
-              <path d="M22 17L38 28L22 39V17Z" fill="rgb(238,99,78)" />
-            </svg>
-            <p>La vidéo de démonstration sera bientôt disponible ici.</p>
-          </div>
+          {/*
+            ✅ Format "embed" obligatoire pour qu'une vidéo YouTube puisse
+            s'afficher dans une iframe sur un autre site. Le lien classique
+            "/watch?v=..." est bloqué par YouTube (X-Frame-Options) et
+            provoque exactement l'erreur "Firefox ne peut pas ouvrir cette
+            page" que tu observais.
+
+            Pour extraire l'URL embed à partir d'un lien classique :
+            https://www.youtube.com/watch?v=ID_VIDEO&t=73s
+                                          ^^^^^^^^^      ^^
+            devient :
+            https://www.youtube.com/embed/ID_VIDEO?start=73
+          */}
+          <iframe
+            src="https://www.youtube.com/embed/MvI80_7sn2Q?start=73"
+            title="Démo SinovaAI"
+            frameBorder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+          />
         </div>
       </div>
     </div>
