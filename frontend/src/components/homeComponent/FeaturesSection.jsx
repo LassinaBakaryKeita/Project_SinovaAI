@@ -3,8 +3,8 @@ import './FeaturesSection.css';
 
 import line1 from '../../assets/images_pourquoi_SinovaAI/Ligne1.png';
 import line2 from '../../assets/images_pourquoi_SinovaAI/Ligne2.png';
-import line3 from '../../assets/images_pourquoi_SinovaAI/Ligne3.png';
-import line4 from '../../assets/images_pourquoi_SinovaAI/Ligne4.png';
+import line3 from '../../assets/images_pourquoi_SinovaAI/ligne3.png';
+import line4 from '../../assets/images_pourquoi_SinovaAI/ligne4.png';
 
 const ROWS = [
   {
