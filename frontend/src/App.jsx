@@ -5,9 +5,9 @@ import Explorer from './pages/Explorer';
 import ChatAI from './pages/ChatAI';
 import Connexion from './pages/Connexion';
 import VideoDetail from './pages/VideoDetail';
-import Layout from './layout/layout';
+import Layout from './layout/Layout';
 import OAuthCallback from './pages/Oauthcallback';
-import ProtectedRoute from './components/ProtectedRoute'; // ✅ adapte le chemin si tu le places ailleurs
+import ProtectedRoute from './components/ProtectedRoute'; 
 
 function App() {
   return (
