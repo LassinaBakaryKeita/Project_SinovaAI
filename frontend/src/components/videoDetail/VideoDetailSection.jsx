@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import axios from '../../api/axiosClient'; // ✅ adapte ce chemin si VideoDetailSection.jsx n'est pas directement sous src/components/xxx (ex: '../../api/axiosClient')
+import axios from '../../api/axiosClient'; 
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import './VideoDetailSection.css';
@@ -111,7 +111,7 @@ export default function VideoDetailSection() {
     }
   }, [messages]);
 
-  // ✅ Enregistre le temps passé sur la vidéo quand l'utilisateur quitte
+  // Enregistre le temps passé sur la vidéo quand l'utilisateur quitte
   // la page (changement de route, retour, etc.). Silencieux en cas
   // d'échec pour ne jamais gêner l'utilisateur.
   useEffect(() => {

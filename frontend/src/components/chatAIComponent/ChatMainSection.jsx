@@ -99,7 +99,7 @@ export default function ChatMainSection() {
     }
   }, [messages]);
 
-  // ✅ Sauvegarde de l'historique à chaque changement, pour qu'il survive
+  //  Sauvegarde de l'historique à chaque changement, pour qu'il survive
   // à une navigation vers une autre page.
   useEffect(() => {
     try {
