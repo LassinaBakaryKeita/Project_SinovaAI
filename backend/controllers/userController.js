@@ -335,7 +335,7 @@ module.exports.effectuerRecherchePersonnalisee = async (req, res) => {
 module.exports.getVideoDetails = async (req, res) => {
     try {
         const { id } = req.params;
-        
+
         console.log("Récupération des détails pour la vidéo:", id);
 
         if (!id) {
@@ -344,33 +344,19 @@ module.exports.getVideoDetails = async (req, res) => {
             });
         }
 
-        // Récupérer les détails de la vidéo depuis YouTube
         const videoDetails = await YoutubeService.getVideoDetails([id]);
-        
+
         if (!videoDetails || videoDetails.length === 0) {
             return res.status(404).json({
                 message: "Vidéo non trouvée"
             });
         }
-        
+
         const video = videoDetails[0];
-        
-    
-        //  CALCUL DE LA POPULARITÉ RÉELLE  
-        // On utilise la même logique que dans ressourceService.js
-        // pour calculer le score SinovaScore
-        const query = video.snippet.title.split(/\s+/).slice(0, 3).join(' '); // Titre simplifié
-        const rankedVideo = RecommendationService.rankVideos([video], query);
-        const sinovaScore = rankedVideo.length > 0 ? rankedVideo[0].sinovaScore : 0;
-        const popularity = Math.round(sinovaScore * 100);
-        
-        console.log(`Popularité calculée pour ${video.id}: ${popularity}%`);
-        
-        // Extraire le titre pour trouver des technologies associées
+
         const titleWords = video.snippet.title.split(/\s+/);
         let relatedResources = [];
-        
-        // Rechercher des documentations associées
+
         for (const word of titleWords) {
             if (word.length > 3) {
                 const docs = await DocumentationService.findTechnology(word);
@@ -383,43 +369,48 @@ module.exports.getVideoDetails = async (req, res) => {
                 }
             }
         }
-        
-        // Si aucune documentation trouvée, ajouter des ressources par défaut
+
         if (relatedResources.length === 0) {
             relatedResources = [
                 { label: 'Voir sur YouTube', url: `https://www.youtube.com/watch?v=${id}` },
                 { label: 'Rechercher sur Google', url: `https://www.google.com/search?q=${encodeURIComponent(video.snippet.title)}` }
             ];
         } else {
-            // Ajouter le lien YouTube en plus
-            relatedResources.push({ 
-                label: 'Voir sur YouTube', 
-                url: `https://www.youtube.com/watch?v=${id}` 
+            relatedResources.push({
+                label: 'Voir sur YouTube',
+                url: `https://www.youtube.com/watch?v=${id}`
             });
         }
 
-        // Formater la réponse avec la popularité réelle
+        const videoData = {
+            id: video.id,
+            title: video.snippet.title,
+            description: video.snippet.description || "Aucune description disponible.",
+            thumbnail: video.snippet.thumbnails?.high?.url || video.snippet.thumbnails?.default?.url || "",
+            duration: video.contentDetails?.duration || "PT0S",
+            source: "YouTube",
+            level: "Tous niveaux",
+            popularity: 85,
+            tag: video.snippet.channelTitle || "Informatique",
+            externalUrl: `https://www.youtube.com/watch?v=${video.id}`
+        };
+
+        //  On enregistre la visite UNIQUEMENT si un utilisateur connecté a
+        // été identifié (req.userId vient d'optionalAuth — peut être undefined
+        // pour un visiteur non connecté, ce qui est silencieusement ignoré
+        // par TrackingService).
+        TrackingService.logVideoVisit(req.userId, videoData);
+
         const response = {
-            video: {
-                id: video.id,
-                title: video.snippet.title,
-                description: video.snippet.description || "Aucune description disponible.",
-                thumbnail: video.snippet.thumbnails?.high?.url || video.snippet.thumbnails?.default?.url || "",
-                duration: video.contentDetails?.duration || "PT0S",
-                source: "YouTube",
-                level: "Tous niveaux",
-                popularity: popularity, 
-                tag: video.snippet.channelTitle || "Informatique",
-                externalUrl: `https://www.youtube.com/watch?v=${video.id}`
-            },
+            video: videoData,
             relatedResources: relatedResources
         };
 
         console.log("Détails de la vidéo envoyés avec succès");
         return res.status(200).json(response);
-        
+
     } catch (error) {
-        console.error(" Erreur getVideoDetails:", error);
+        console.error("Erreur getVideoDetails:", error);
         return res.status(500).json({
             message: "Erreur lors de la récupération des détails de la vidéo",
             error: error.message
@@ -511,7 +502,7 @@ module.exports.poserQuestionAssistantSinovaAIGeneral = async (req, res) => {
     }
 };
 
-//  Nouveau : enregistrement du temps passé sur une vidéo
+// ✅ Nouveau : enregistrement du temps passé sur une vidéo
 // Appelé par le frontend quand l'utilisateur quitte la page video-detail.
 module.exports.trackTimeSpent = async (req, res) => {
     try {
