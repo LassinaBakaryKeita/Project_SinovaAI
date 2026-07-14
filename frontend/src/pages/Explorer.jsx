@@ -1,10 +1,14 @@
 import React, { useState, useEffect, useRef } from "react";
-import axios from '../api/axiosClient'; 
+import axios from '../api/axiosClient';
 
 import ExplorerHeroSection from "../components/explorerComponent/ExplorerHeroSection";
 import RessourcesSection from "../components/explorerComponent/RessourcesSection";
 
 export default function Explorer() {
+
+  // ================================
+  // Etat de la recherche - AVEC PERSISTANCE
+  // ================================
 
   const [query, setQuery] = useState(() => {
     return localStorage.getItem('explorer_query') || "";
@@ -22,9 +26,19 @@ export default function Explorer() {
 
   const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
+  // ================================
+  // GARDE ANTI RACE-CONDITION
+  // ================================
+  // On garde une trace de "quelle requête est la plus récente".
+  // Toute réponse qui arrive alors qu'elle n'est plus la plus récente
+  // est simplement ignorée : elle ne peut plus écraser un résultat
+  // plus récent déjà affiché.
   const requestIdRef = useRef(0);
   const abortControllerRef = useRef(null);
 
+  // ================================
+  // Sauvegarder l'état dans localStorage
+  // ================================
   useEffect(() => {
     localStorage.setItem('explorer_query', query);
   }, [query]);
@@ -37,6 +51,9 @@ export default function Explorer() {
     localStorage.setItem('explorer_error', error);
   }, [error]);
 
+  // ================================
+  // Nettoyage à la destruction du composant
+  // ================================
   useEffect(() => {
     return () => {
       if (abortControllerRef.current) {
@@ -45,17 +62,26 @@ export default function Explorer() {
     };
   }, []);
 
+  // ================================
+  // Effectuer la recherche classique
+  // ================================
+
+  // overrideQuery permet de forcer une valeur précise (ex: clic sur un tag)
+  // sans dépendre de l'état React `query`, qui peut ne pas être encore
+  // synchronisé au moment de l'appel (closure figée).
   const effectuerRecherche = async (overrideQuery) => {
     const searchTerm = (overrideQuery ?? query).trim();
     if (!searchTerm) return;
-    if (loading) return;
+    if (loading) return; // ← empêche un déclenchement pendant qu'une recherche tourne déjà
 
+    // On annule toute requête précédente encore en vol
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
     const controller = new AbortController();
     abortControllerRef.current = controller;
 
+    // On incrémente l'identifiant de requête courant
     const currentRequestId = ++requestIdRef.current;
 
     try {
@@ -67,6 +93,8 @@ export default function Explorer() {
         { params: { query: searchTerm }, signal: controller.signal }
       );
 
+      // Si une recherche plus récente a été lancée entre-temps,
+      // on ignore cette réponse devenue obsolète.
       if (currentRequestId !== requestIdRef.current) return;
 
       setQuery(searchTerm);
@@ -74,7 +102,13 @@ export default function Explorer() {
       setError("");
 
     } catch (error) {
-      if (axios.isCancel(error) || error.name === "CanceledError" || error.code === "ERR_CANCELED") {
+      // Requête annulée volontairement (nouvelle recherche lancée) : on ignore.
+      // ✅ On ne peut pas utiliser axios.isCancel() ici : `axios` est en
+      // réalité axiosClient (une instance créée via axios.create()), qui ne
+      // possède pas cette méthode statique. Ça causait un crash en
+      // production ("np.isCancel is not a function"). error.name et
+      // error.code suffisent largement à détecter une annulation.
+      if (error.name === "CanceledError" || error.code === "ERR_CANCELED") {
         return;
       }
 
@@ -110,6 +144,10 @@ export default function Explorer() {
     }
   };
 
+  // ================================
+  // Effectuer la recherche personnalisée
+  // ================================
+
   const effectuerRecherchePersonnalisee = async (formData) => {
     if (loading) return;
 
@@ -125,7 +163,7 @@ export default function Explorer() {
       setLoading(true);
       setError("");
 
-      console.log("Envoi des données personnalisées:", formData);
+      console.log("📤 Envoi des données personnalisées:", formData);
 
       const response = await axios.post(
         `${BASE_URL}/api/user/effectuerRecherchePersonnalisee`,
@@ -147,19 +185,19 @@ export default function Explorer() {
 
       if (currentRequestId !== requestIdRef.current) return;
 
-      console.log('Ressources personnalisées reçues:', response.data);
+      console.log('✅ Ressources personnalisées reçues:', response.data);
       setResources(response.data);
       setError("");
       setQuery(formData.query);
 
     } catch (error) {
-      if (axios.isCancel(error) || error.name === "CanceledError" || error.code === "ERR_CANCELED") {
+      if (error.name === "CanceledError" || error.code === "ERR_CANCELED") {
         return;
       }
 
       if (currentRequestId !== requestIdRef.current) return;
 
-      console.error("Erreur lors de la recherche personnalisée:", error);
+      console.error("❌ Erreur lors de la recherche personnalisée:", error);
 
       if (error.response) {
         const errorMessage = error.response.data?.message;
@@ -189,11 +227,14 @@ export default function Explorer() {
     }
   };
 
+  // ================================
+  // Fonction pour réinitialiser la recherche
+  // ================================
   const resetSearch = () => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
-    requestIdRef.current++;
+    requestIdRef.current++; // invalide toute requête en vol
     setQuery("");
     setResources([]);
     setError("");

@@ -7,7 +7,7 @@ const recommendationService = require("../services/recommendationService");
 const YoutubeService = require("../services/youtubeService");
 const DocumentationService = require("../services/documentationService");
 const GeminiService = require("../services/geminiService");
-const TrackingService = require("../services/trackingService");
+const TrackingService = require("../services/trackingService"); // ✅ nouveau
 
 // Génère un token JWT pour l'utilisateur
 const createToken = (id) => {
@@ -212,9 +212,12 @@ module.exports.effectuerRecherche = async (req, res) => {
             });
         }
 
-        // On log la recherche indépendamment du résultat (succès ou échec),
+        // ✅ On log la recherche indépendamment du résultat (succès ou échec),
         // via req.userId injecté par le middleware requireAuth.
-        TrackingService.logSearchHistory(req.userId, query, "classique");
+        // "await" est essentiel en environnement serverless (Vercel) : sans
+        // ça, la fonction peut être gelée juste après l'envoi de la réponse,
+        // avant que l'écriture en base ne soit terminée.
+        await TrackingService.logSearchHistory(req.userId, query, "classique");
 
         const results = await RessourceService.resources(query);
 
@@ -265,8 +268,8 @@ module.exports.effectuerRecherchePersonnalisee = async (req, res) => {
             });
         }
 
-        //  Log de la recherche personnalisée, dès validation des champs.
-        TrackingService.logSearchHistory(req.userId, query, "personnalisee");
+        // ✅ Log de la recherche personnalisée, dès validation des champs.
+        await TrackingService.logSearchHistory(req.userId, query, "personnalisee");
 
         const parsedObjectives = Array.isArray(objectives) ? objectives : [];
         const parsedStyles = Array.isArray(styles) ? styles : [];
@@ -395,8 +398,14 @@ module.exports.getVideoDetails = async (req, res) => {
             externalUrl: `https://www.youtube.com/watch?v=${video.id}`
         };
 
-       
-        TrackingService.logVideoVisit(req.userId, videoData);
+        // ✅ On enregistre la visite UNIQUEMENT si un utilisateur connecté a
+        // été identifié (req.userId vient d'optionalAuth — peut être undefined
+        // pour un visiteur non connecté, ce qui est silencieusement ignoré
+        // par TrackingService). "await" est indispensable ici : sans lui,
+        // sur Vercel, la réponse HTTP peut partir et geler la fonction avant
+        // que l'écriture Ressource/UserActivity/RecommendationFeedback ne
+        // soit terminée — c'est ce qui rendait ces tables vides jusqu'ici.
+        await TrackingService.logVideoVisit(req.userId, videoData);
 
         const response = {
             video: videoData,
@@ -455,8 +464,9 @@ module.exports.poserQuestionAssistantSinovaAIRessource = async (req, res) => {
         const response = await GeminiService.poserQuestionSinovaAIRessource(video, message);
 
         // ✅ Incrémente le compteur de questions posées pour cette vidéo,
-        // uniquement si l'utilisateur est identifié.
-        TrackingService.incrementQuestionCount(req.userId, videoId);
+        // uniquement si l'utilisateur est identifié. "await" pour la même
+        // raison que ci-dessus (fiabilité sur environnement serverless).
+        await TrackingService.incrementQuestionCount(req.userId, videoId);
 
         return res.status(200).json({
             message: response
