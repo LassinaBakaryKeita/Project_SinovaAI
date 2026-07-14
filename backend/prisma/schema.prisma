@@ -42,7 +42,12 @@ model User {
 // RESSOURCE
 
 model Ressource {
-  id               Int    @id @default(autoincrement())
+  id Int @id @default(autoincrement())
+
+  //  Identifiant externe stable pour retrouver/upserter la ressource :
+  // "youtube:<videoId>" pour une vidéo, "doc:<technologyId>" pour une doc.
+  externalId String @unique @map("external_id")
+
   titre            String
   description      String
   duree            Int
@@ -74,12 +79,13 @@ model UserActivity {
 
   nombreQuestionIA Int @default(0) @map("nombre_question_ia")
 
-  estFavori Boolean @default(false) @map("est_favori")
-
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   ressource Ressource @relation(fields: [ressourceId], references: [id], onDelete: Cascade)
 
+  //  Une seule ligne d'activité par (utilisateur, ressource) : on la
+  // met à jour à chaque nouvelle visite plutôt que d'en créer une nouvelle.
+  @@unique([userId, ressourceId])
   @@index([userId])
   @@index([ressourceId])
   @@map("user_activity")
@@ -117,40 +123,34 @@ model RecommendationFeedback {
 
   visionComplete Boolean @default(false) @map("vision_complete")
 
-  aime Boolean @default(false)
-
   tempsVisionnage Int @default(0) @map("temps_visionnage_secondes")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   ressource Ressource @relation(fields: [ressourceId], references: [id], onDelete: Cascade)
 
+  @@unique([userId, ressourceId])
   @@index([userId])
   @@index([ressourceId])
   @@map("recommendation_feedback")
 }
 
-
-
 // Technology
 
 model Technology {
-  id                      Int      @id @default(autoincrement())
+  id Int @id @default(autoincrement())
 
-  name                    String   @unique
+  name String @unique
 
-  slug                    String   @unique
+  slug String @unique
 
-  category                String
+  category String
 
-  description             String
+  description String
 
-  officialDocumentation   String
+  officialDocumentation String
 
-  officialWebsite         String
+  officialWebsite String
 
-  logo                    String
-
+  logo String
 }
-
-
