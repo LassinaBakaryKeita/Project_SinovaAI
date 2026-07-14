@@ -3,7 +3,7 @@ require("dotenv").config();
 
 const express = require("express");
 const cors = require("cors");
-const session = require("express-session");
+//const session = require("express-session");
 const passport = require("./config/passport");
 
 const { connectDB } = require("./config/prisma");
@@ -22,17 +22,17 @@ app.use(cors());
 app.use(express.json());
 
 // Configuration de la session utilisée par Passport
-app.use(
+/*app.use(
     session({
         secret: process.env.SESSION_SECRET,
         resave: false,
         saveUninitialized: false
     })
-);
+);*/
 
 // Initialisation de Passport
 app.use(passport.initialize());
-app.use(passport.session());
+//app.use(passport.session());
 
 
 // Route de test

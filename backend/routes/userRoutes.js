@@ -14,9 +14,12 @@ router.post("/seConnecterClassique", userController.seConnecterClassique);
 router.get(
     "/authGoogle",
     passport.authenticate("google", {
-        scope: ["profile", "email"]
+        scope: ["profile", "email"],
+        session: false //  évite toute dépendance à express-session (MemoryStore),
+                        // incompatible avec le côté stateless de Vercel serverless
     })
 );
+
 
 // Google redirige automatiquement l'utilisateur vers cette route
 router.get(
