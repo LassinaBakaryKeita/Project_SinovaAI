@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-// ✅ Instance axios qui attache automatiquement le header Authorization
+//  Instance axios qui attache automatiquement le header Authorization
 // à chaque requête, si un token est présent dans localStorage.
 // Remplace simplement `import axios from 'axios'` par
 // `import axios from '<chemin vers ce fichier>'` dans chaque fichier qui
