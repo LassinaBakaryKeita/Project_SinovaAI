@@ -395,10 +395,7 @@ module.exports.getVideoDetails = async (req, res) => {
             externalUrl: `https://www.youtube.com/watch?v=${video.id}`
         };
 
-        //  On enregistre la visite UNIQUEMENT si un utilisateur connecté a
-        // été identifié (req.userId vient d'optionalAuth — peut être undefined
-        // pour un visiteur non connecté, ce qui est silencieusement ignoré
-        // par TrackingService).
+       
         TrackingService.logVideoVisit(req.userId, videoData);
 
         const response = {
