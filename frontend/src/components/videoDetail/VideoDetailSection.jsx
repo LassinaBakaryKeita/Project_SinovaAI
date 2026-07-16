@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import axios from '../../api/axiosClient'; 
+import axios from '../api/axiosClient'; // ✅ adapte ce chemin si VideoDetailSection.jsx n'est pas directement sous src/components/xxx (ex: '../../api/axiosClient')
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import './VideoDetailSection.css';
@@ -111,15 +111,22 @@ export default function VideoDetailSection() {
     }
   }, [messages]);
 
-  // Enregistre le temps passé sur la vidéo quand l'utilisateur quitte
-  // la page (changement de route, retour, etc.). Silencieux en cas
-  // d'échec pour ne jamais gêner l'utilisateur.
+  // ✅ Enregistre le temps de visionnage par petits paquets réguliers
+  // (toutes les 20s) pendant que la page est ouverte, PLUS un dernier envoi
+  // du reliquat à la sortie. L'ancienne version n'envoyait qu'à la sortie
+  // via le nettoyage du useEffect — mais ce nettoyage ne se déclenche
+  // jamais si l'utilisateur ferme l'onglet ou recharge la page (F5),
+  // laissant tempsPasse/tempsVisionnage à 0 dans ce cas. Le heartbeat
+  // corrige ça : même sans sortie "propre", l'essentiel du temps est déjà
+  // enregistré par les envois périodiques précédents.
   useEffect(() => {
-    const startTime = Date.now();
+    let lastSentAt = Date.now();
 
-    return () => {
-      const secondsSpent = Math.round((Date.now() - startTime) / 1000);
-      if (secondsSpent < 3) return; // ignore les passages trop courts
+    const sendElapsed = () => {
+      const secondsSpent = Math.round((Date.now() - lastSentAt) / 1000);
+      if (secondsSpent < 3) return;
+
+      lastSentAt = Date.now();
 
       axios.post(`${BASE_URL}/api/user/trackTimeSpent`, {
         videoId: id,
@@ -127,6 +134,16 @@ export default function VideoDetailSection() {
       }).catch(() => {
         // silencieux : un échec de tracking ne doit jamais gêner l'utilisateur
       });
+    };
+
+    // Envoi périodique toutes les 20 secondes pendant le visionnage.
+    const intervalId = setInterval(sendElapsed, 20000);
+
+    return () => {
+      clearInterval(intervalId);
+      // Dernier envoi du reliquat (temps écoulé depuis le dernier heartbeat)
+      // au moment où l'utilisateur quitte la page via la navigation interne.
+      sendElapsed();
     };
   }, [id, BASE_URL]);
 

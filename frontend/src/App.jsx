@@ -5,14 +5,15 @@ import Explorer from './pages/Explorer';
 import ChatAI from './pages/ChatAI';
 import Connexion from './pages/Connexion';
 import VideoDetail from './pages/VideoDetail';
-import Layout from './layout/Layout';
+import Layout from './layout/layout';
 import OAuthCallback from './pages/Oauthcallback';
 import ProtectedRoute from './components/ProtectedRoute'; 
+import ScrollToTop from './components/ScrollToTop';
 
 function App() {
   return (
     <div className="app">
-      
+      <ScrollToTop />
         <Routes>
           <Route path="/" element={<Layout />} > 
             <Route index element={<Home/>}/>

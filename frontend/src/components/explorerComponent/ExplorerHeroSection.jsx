@@ -6,7 +6,7 @@ export default function ExplorerHeroSection({
   setQuery,
   onSearch,
   onReset,
-  loading = false
+  loading = false //  empêche de relancer une recherche pendant qu'une autre tourne
 }) {
 
   const handleKeyDown = (event) => {
@@ -15,6 +15,7 @@ export default function ExplorerHeroSection({
     }
   };
 
+  // Fonction pour effacer la recherche
   const handleClear = () => {
     if (loading) return;
     setQuery('');
@@ -23,16 +24,31 @@ export default function ExplorerHeroSection({
 
   const handleTagClick = (tag) => {
     if (loading) return;
-    setQuery(tag);
-    onSearch(tag);
+    setQuery(tag.value);
+    // On passe directement la valeur du tag à onSearch, plutôt que de
+    // compter sur l'état `query` (qui n'est pas encore synchronisé à cet
+    // instant précis). C'est ce qui causait le décalage "d'une recherche".
+    onSearch(tag.value);
   };
 
-  const popularTags = ['Python', 'JavaScript', 'React', 'Java', 'Docker', 'Machine Learning'];
+  //  Tags populaires : "label" est ce qui s'affiche (court, lisible),
+  // "value" est la vraie requête envoyée (plus précise). Objectif : que
+  // l'utilisateur associe inconsciemment "recherche précise" = "bons
+  // résultats", sans pour autant afficher un texte à rallonge dans le bouton.
+  const popularTags = [
+    { label: 'Python débutant', value: 'Python tutoriel débutant' },
+    { label: 'JavaScript moderne', value: 'JavaScript ES6 tutoriel' },
+    { label: 'React JS (librairie)', value: 'React JS librairie tutoriel' },
+    { label: 'Java orienté objet', value: 'Java programmation orientée objet' },
+    { label: 'Docker conteneurs', value: 'Docker conteneurs tutoriel' },
+    { label: 'Machine Learning débutant', value: 'Machine Learning tutoriel débutant' },
+  ];
 
   return (
     <section className="explorer-hero">
       <div className="explorer-hero-container">
 
+        {/* ===== Badge ===== */}
         <div className="explorer-hero-badge">
           <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
             <circle cx="5" cy="5" r="5" fill="#EE634E" opacity="0.3" />
@@ -41,14 +57,17 @@ export default function ExplorerHeroSection({
           <span>Ressources</span>
         </div>
 
+        {/* ===== Titre ===== */}
         <h1 className="explorer-hero-title">
           Explorer les ressources
         </h1>
 
+        {/* ===== Sous-titre ===== */}
         <p className="explorer-hero-subtitle">
           Découvrez les meilleures ressources pour chaque technologie
         </p>
 
+        {/* ===== Barre de recherche ===== */}
         <div className="explorer-search-bar">
           <svg
             width="20"
@@ -82,6 +101,7 @@ export default function ExplorerHeroSection({
             disabled={loading}
           />
 
+          {/* ===== BOUTON EFFACER ===== */}
           {query && (
             <button
               className="explorer-clear-btn"
@@ -130,11 +150,12 @@ export default function ExplorerHeroSection({
           </button>
         </div>
 
+        {/* ===== TAGS POPULAIRES ===== */}
         <div className="explorer-tags">
           <span className="explorer-tags-label">Populaires :</span>
           {popularTags.map((tag) => (
             <button
-              key={tag}
+              key={tag.label}
               className="explorer-tag"
               disabled={loading}
               onClick={() => {
@@ -145,10 +166,15 @@ export default function ExplorerHeroSection({
                 cursor: loading ? 'not-allowed' : 'pointer'
               }}
             >
-              {tag}
+              {tag.label}
             </button>
           ))}
         </div>
+
+        {/* ===== ASTUCE PRÉCISION (discrète, non culpabilisante) ===== */}
+        <p className="explorer-precision-hint">
+          💡 Plus votre recherche est précise (ex : « Django REST API » plutôt que « Python »), meilleurs seront les résultats. Cette optimisation sera automatisée par IA dans une prochaine version.
+        </p>
 
       </div>
     </section>

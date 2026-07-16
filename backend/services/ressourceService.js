@@ -11,21 +11,52 @@ class RessourceService {
      */
     async resources(query) {
         try {
-            // 1. Validation métier
-            const documentations = await DocumentationService.findTechnology(query);
+            //  1. Validation métier ÉLARGIE : on utilise désormais la même
+            // logique que la recherche personnalisée (table Technology OU
+            // liste de concepts informatiques comme "machine learning",
+            // "algorithme", etc.), au lieu d'exiger une correspondance
+            // exacte dans la table Technology. C'est ce qui bloquait
+            // complètement "Machine Learning" alors que c'est un sujet
+            // informatique parfaitement légitime, juste sans documentation
+            // officielle dédiée dans notre table.
+            const csCheck = await RecommendationService.isComputerScienceQuery(query);
 
-            if (documentations.length === 0) {
+            if (!csCheck.isValid) {
                 return {
                     success: false,
                     validTechnology: false,
-                    message: "Cette recherche ne correspond à aucune technologie informatique prise en charge par SinovaAI.",
+                    message: csCheck.message,
                     videos: [],
                     documentations: []
                 };
             }
 
-            // 2. Recherche YouTube
-            const searchVideos = await YoutubeService.searchVideos(query);
+            // 2. La documentation officielle devient OPTIONNELLE : son
+            // absence ne bloque plus la recherche YouTube.
+            const documentations = await DocumentationService.findTechnology(query);
+
+            //  3. Construction d'une requête YouTube désambiguïsée, SANS
+            // appel à une IA (pour rester rapide) : si la requête correspond
+            // à une technologie connue en base, on enrichit avec son nom
+            // exact et sa catégorie pour orienter YouTube vers du contenu
+            // pédagogique/informatique plutôt que des vidéos qui contiennent
+            // juste le mot par coïncidence (ex: "react" → vidéos de
+            // réactions au lieu de la librairie JS).
+            let youtubeSearchQuery = query;
+
+            if (documentations.length > 0) {
+                const matched = documentations[0];
+                youtubeSearchQuery = `${matched.name} ${matched.category} programming tutorial`;
+            } else {
+                // Sujet informatique valide mais sans doc officielle
+                // (ex: "machine learning") : on ajoute quand même un
+                // qualificatif générique pour biaiser vers du contenu
+                // technique/pédagogique.
+                youtubeSearchQuery = `${query} programming tutorial`;
+            }
+
+            // 4. Recherche YouTube
+            const searchVideos = await YoutubeService.searchVideos(youtubeSearchQuery);
 
             let videos = [];
             let rankedVideos = [];
@@ -33,10 +64,14 @@ class RessourceService {
             if (searchVideos && searchVideos.length > 0) {
                 const ids = searchVideos.map(video => video.id.videoId);
                 videos = await YoutubeService.getVideoDetails(ids);
+                //  Le classement de pertinence reste basé sur la requête
+                // ORIGINALE de l'utilisateur (pas la version enrichie) :
+                // c'est elle qui doit apparaître dans le titre/la description
+                // pour qu'une vidéo soit jugée pertinente.
                 rankedVideos = RecommendationService.rankVideos(videos, query);
             }
 
-            // 3. Préparation des vidéos
+            // 5. Préparation des vidéos
             const formattedVideos = rankedVideos.map(item => ({
                 id: item.video.id,
                 title: item.video.snippet.title,
@@ -53,7 +88,7 @@ class RessourceService {
                 resourceType: "Vidéo"
             }));
 
-            // 4. Préparation documentations
+            // 6. Préparation documentations (peut être vide, sans bloquer)
             const formattedDocs = documentations.map(doc => ({
                 id: doc.id,
                 title: doc.name,
@@ -70,7 +105,7 @@ class RessourceService {
                 resourceType: "Documentation officielle"
             }));
 
-            // 5. Résultat final
+            // 7. Résultat final
             return {
                 success: true,
                 validTechnology: true,
@@ -151,13 +186,23 @@ class RessourceService {
             }
 
             // 3. Recherche YouTube
+            //  Même logique d'enrichissement que la recherche classique :
+            // si une techno connue correspond, on précise nom + catégorie
+            // pour réduire les résultats hors-sujet.
             if (searchYoutube) {
-                const searchVideos = await YoutubeService.searchVideos(youtubeQuery);
+                let enrichedYoutubeQuery = youtubeQuery;
+
+                if (technologies && technologies.length > 0) {
+                    const matched = technologies[0];
+                    enrichedYoutubeQuery = `${matched.name} ${matched.category} ${youtubeQuery}`;
+                }
+
+                const searchVideos = await YoutubeService.searchVideos(enrichedYoutubeQuery);
 
                 if (searchVideos && searchVideos.length > 0) {
                     const ids = searchVideos.map(video => video.id.videoId);
                     const videos = await YoutubeService.getVideoDetails(ids);
-                    const rankedVideos = RecommendationService.rankVideos(videos, youtubeQuery);
+                    const rankedVideos = RecommendationService.rankVideos(videos, documentationQuery || youtubeQuery);
 
                     formattedVideos = rankedVideos.map(item => ({
                         id: item.video.id,
