@@ -91,13 +91,17 @@ async function isComputerScienceQuery(query) {
 }
 
 /**
- * Calcule le score SES (Sinova Engagement Score)
+ * Calcule le score d'engagement pur d'une vidéo (vues, likes, commentaires),
+ * SANS tenir compte d'une éventuelle requête de recherche. Utilisé quand on
+ * affiche une vidéo isolément (page détail), hors contexte de recherche.
+ * @param {Object} video - Objet vidéo YouTube (avec statistics)
+ * @returns {number} - Score entre 0 et 1
  */
-function calculateSES(video, query) {
+function calculateEngagementScore(video) {
     try {
-        const { statistics, snippet } = video;
+        const { statistics } = video;
 
-        if (!statistics || !snippet) {
+        if (!statistics) {
             return 0;
         }
 
@@ -114,12 +118,9 @@ function calculateSES(video, query) {
         const commentRatio = viewCount > 0 ? commentCount / viewCount : 0;
 
         let score = 0;
-        const viewScore = Math.min(viewCount / 1000000, 1) * 0.5;
-        score += viewScore;
-        const likeScore = Math.min(likeRatio * 10, 1) * 0.3;
-        score += likeScore;
-        const commentScore = Math.min(commentRatio * 20, 1) * 0.2;
-        score += commentScore;
+        score += Math.min(viewCount / 1000000, 1) * 0.5;
+        score += Math.min(likeRatio * 10, 1) * 0.3;
+        score += Math.min(commentRatio * 20, 1) * 0.2;
 
         if (viewCount < 100) {
             score *= 0.5;
@@ -129,8 +130,28 @@ function calculateSES(video, query) {
             score *= 1.1;
         }
 
-        const titleMatch = snippet.title?.toLowerCase().includes(query.toLowerCase());
-        const descMatch = snippet.description?.toLowerCase().includes(query.toLowerCase());
+        return Math.min(Math.max(score, 0), 1);
+
+    } catch (error) {
+        console.error("Erreur lors du calcul du score d'engagement:", error);
+        return 0;
+    }
+}
+
+/**
+ * Calcule le score SES (Sinova Engagement Score) — engagement + bonus de
+ * pertinence si le titre/la description contient la requête de recherche.
+ * Utilisé lors du classement des résultats de recherche.
+ */
+function calculateSES(video, query) {
+    try {
+        const { snippet } = video;
+
+        let score = calculateEngagementScore(video);
+        if (score === 0) return 0;
+
+        const titleMatch = snippet?.title?.toLowerCase().includes(query.toLowerCase());
+        const descMatch = snippet?.description?.toLowerCase().includes(query.toLowerCase());
 
         if (titleMatch || descMatch) {
             score *= 1.1;
@@ -334,6 +355,7 @@ async function personalizeSearch(
 
 module.exports = {
     isComputerScienceQuery,
+    calculateEngagementScore, 
     calculateSES,
     calculatePertinence,
     rankVideos,
