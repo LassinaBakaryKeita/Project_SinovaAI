@@ -7,7 +7,7 @@ const recommendationService = require("../services/recommendationService");
 const YoutubeService = require("../services/youtubeService");
 const DocumentationService = require("../services/documentationService");
 const GeminiService = require("../services/geminiService");
-const TrackingService = require("../services/trackingService"); // ✅ nouveau
+const TrackingService = require("../services/trackingService"); 
 
 // Génère un token JWT pour l'utilisateur
 const createToken = (id) => {
@@ -212,7 +212,7 @@ module.exports.effectuerRecherche = async (req, res) => {
             });
         }
 
-        // ✅ On log la recherche indépendamment du résultat (succès ou échec),
+        //  On log la recherche indépendamment du résultat (succès ou échec),
         // via req.userId injecté par le middleware requireAuth.
         // "await" est essentiel en environnement serverless (Vercel) : sans
         // ça, la fonction peut être gelée juste après l'envoi de la réponse,
@@ -268,7 +268,7 @@ module.exports.effectuerRecherchePersonnalisee = async (req, res) => {
             });
         }
 
-        // ✅ Log de la recherche personnalisée, dès validation des champs.
+        // Log de la recherche personnalisée, dès validation des champs.
         await TrackingService.logSearchHistory(req.userId, query, "personnalisee");
 
         const parsedObjectives = Array.isArray(objectives) ? objectives : [];
@@ -385,6 +385,13 @@ module.exports.getVideoDetails = async (req, res) => {
             });
         }
 
+        //  Score de popularité RÉEL, calculé à partir des vraies
+        // statistiques YouTube (vues/likes/commentaires) de cette vidéo,
+        // avec la même méthode que celle utilisée pour classer les
+        // résultats de recherche — au lieu de la valeur fixe "85" utilisée
+        // jusqu'ici, qui ne reflétait rien de réel.
+        const popularityScore = recommendationService.calculateEngagementScore(video);
+
         const videoData = {
             id: video.id,
             title: video.snippet.title,
@@ -393,12 +400,12 @@ module.exports.getVideoDetails = async (req, res) => {
             duration: video.contentDetails?.duration || "PT0S",
             source: "YouTube",
             level: "Tous niveaux",
-            popularity: 85,
+            popularity: Math.round(popularityScore * 100),
             tag: video.snippet.channelTitle || "Informatique",
             externalUrl: `https://www.youtube.com/watch?v=${video.id}`
         };
 
-        // ✅ On enregistre la visite UNIQUEMENT si un utilisateur connecté a
+        //  On enregistre la visite UNIQUEMENT si un utilisateur connecté a
         // été identifié (req.userId vient d'optionalAuth — peut être undefined
         // pour un visiteur non connecté, ce qui est silencieusement ignoré
         // par TrackingService). "await" est indispensable ici : sans lui,
@@ -463,7 +470,7 @@ module.exports.poserQuestionAssistantSinovaAIRessource = async (req, res) => {
 
         const response = await GeminiService.poserQuestionSinovaAIRessource(video, message);
 
-        // ✅ Incrémente le compteur de questions posées pour cette vidéo,
+        //  Incrémente le compteur de questions posées pour cette vidéo,
         // uniquement si l'utilisateur est identifié. "await" pour la même
         // raison que ci-dessus (fiabilité sur environnement serverless).
         await TrackingService.incrementQuestionCount(req.userId, videoId);
@@ -509,7 +516,7 @@ module.exports.poserQuestionAssistantSinovaAIGeneral = async (req, res) => {
     }
 };
 
-// ✅ Nouveau : enregistrement du temps passé sur une vidéo
+//  Nouveau : enregistrement du temps passé sur une vidéo
 // Appelé par le frontend quand l'utilisateur quitte la page video-detail.
 module.exports.trackTimeSpent = async (req, res) => {
     try {

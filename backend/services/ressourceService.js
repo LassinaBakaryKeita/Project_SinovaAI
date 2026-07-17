@@ -1,271 +1,363 @@
-const YoutubeService = require("./youtubeService");
-const RecommendationService = require("./recommendationService");
+const { prisma } = require("../config/prisma");
 const DocumentationService = require("./documentationService");
 
-class RessourceService {
-
-    /**
-     * Recherche classique de ressources
-     * @param {string} query - La requête de recherche
-     * @returns {Promise<Object>} - Résultats de la recherche
-     */
-    async resources(query) {
-        try {
-            //  1. Validation métier ÉLARGIE : on utilise désormais la même
-            // logique que la recherche personnalisée (table Technology OU
-            // liste de concepts informatiques comme "machine learning",
-            // "algorithme", etc.), au lieu d'exiger une correspondance
-            // exacte dans la table Technology. C'est ce qui bloquait
-            // complètement "Machine Learning" alors que c'est un sujet
-            // informatique parfaitement légitime, juste sans documentation
-            // officielle dédiée dans notre table.
-            const csCheck = await RecommendationService.isComputerScienceQuery(query);
-
-            if (!csCheck.isValid) {
-                return {
-                    success: false,
-                    validTechnology: false,
-                    message: csCheck.message,
-                    videos: [],
-                    documentations: []
-                };
-            }
-
-            // 2. La documentation officielle devient OPTIONNELLE : son
-            // absence ne bloque plus la recherche YouTube.
-            const documentations = await DocumentationService.findTechnology(query);
-
-            //  3. Construction d'une requête YouTube désambiguïsée, SANS
-            // appel à une IA (pour rester rapide) : si la requête correspond
-            // à une technologie connue en base, on enrichit avec son nom
-            // exact et sa catégorie pour orienter YouTube vers du contenu
-            // pédagogique/informatique plutôt que des vidéos qui contiennent
-            // juste le mot par coïncidence (ex: "react" → vidéos de
-            // réactions au lieu de la librairie JS).
-            let youtubeSearchQuery = query;
-
-            if (documentations.length > 0) {
-                const matched = documentations[0];
-                youtubeSearchQuery = `${matched.name} ${matched.category} programming tutorial`;
-            } else {
-                // Sujet informatique valide mais sans doc officielle
-                // (ex: "machine learning") : on ajoute quand même un
-                // qualificatif générique pour biaiser vers du contenu
-                // technique/pédagogique.
-                youtubeSearchQuery = `${query} programming tutorial`;
-            }
-
-            // 4. Recherche YouTube
-            const searchVideos = await YoutubeService.searchVideos(youtubeSearchQuery);
-
-            let videos = [];
-            let rankedVideos = [];
-
-            if (searchVideos && searchVideos.length > 0) {
-                const ids = searchVideos.map(video => video.id.videoId);
-                videos = await YoutubeService.getVideoDetails(ids);
-                //  Le classement de pertinence reste basé sur la requête
-                // ORIGINALE de l'utilisateur (pas la version enrichie) :
-                // c'est elle qui doit apparaître dans le titre/la description
-                // pour qu'une vidéo soit jugée pertinente.
-                rankedVideos = RecommendationService.rankVideos(videos, query);
-            }
-
-            // 5. Préparation des vidéos
-            const formattedVideos = rankedVideos.map(item => ({
-                id: item.video.id,
-                title: item.video.snippet.title,
-                description: item.video.snippet.description,
-                level: "Tous niveaux",
-                duration: item.video.contentDetails.duration,
-                source: "YouTube",
-                popularity: Math.round(item.sinovaScore * 100),
-                ownerName: item.video.snippet.channelTitle,
-                ownerLogo: "youtube",
-                variant: 0,
-                thumbnail: item.video.snippet.thumbnails.high.url,
-                externalUrl: `https://www.youtube.com/watch?v=${item.video.id}`,
-                resourceType: "Vidéo"
-            }));
-
-            // 6. Préparation documentations (peut être vide, sans bloquer)
-            const formattedDocs = documentations.map(doc => ({
-                id: doc.id,
-                title: doc.name,
-                description: doc.description,
-                level: "Documentation officielle",
-                duration: null,
-                source: "Documentation",
-                popularity: null,
-                ownerName: doc.name,
-                ownerLogo: doc.logo,
-                variant: 1,
-                thumbnail: doc.logo,
-                externalUrl: doc.officialDocumentation,
-                resourceType: "Documentation officielle"
-            }));
-
-            // 7. Résultat final
-            return {
-                success: true,
-                validTechnology: true,
-                message: null,
-                videos: formattedVideos,
-                documentations: formattedDocs
-            };
-
-        } catch (error) {
-            console.error("Erreur lors de la recherche classique:", error);
-            return {
-                success: false,
-                validTechnology: false,
-                message: "Une erreur est survenue lors de la recherche.",
-                videos: [],
-                documentations: []
-            };
-        }
+/**
+ * Vérifie si une requête appartient au domaine de l'informatique
+ * @param {string} query - La requête de recherche
+ * @returns {Promise<Object>} - { isValid: boolean, message: string }
+ */
+async function isComputerScienceQuery(query) {
+    if (!query || !query.trim()) {
+        return { isValid: false, message: "Veuillez saisir un sujet de recherche." };
     }
 
-    /**
-     * Recherche personnalisée de ressources
-     * @param {Object} recommendation - Objet de recommandation personnalisée
-     * @returns {Promise<Object>} - Résultats de la recherche personnalisée
-     */
-    async personalizedResources(recommendation) {
-        try {
-            const {
-                youtubeQuery,
-                documentationQuery,
-                searchYoutube,
-                searchDocumentation,
-                isValidComputerScience,
-                hasDocumentation,
-                technologies,
-                error
-            } = recommendation;
+    const normalizedQuery = query.toLowerCase().trim();
 
-            let formattedVideos = [];
-            let formattedDocs = [];
-            let message = null;
-            let success = true;
-            let validTechnology = true;
+    // Vérification dans la base de données des technologies
+    try {
+        const technologies = await prisma.technology.findMany({
+            select: { name: true }
+        });
 
-            // 1. Vérification initiale
-            if (!isValidComputerScience) {
-                return {
-                    success: false,
-                    validTechnology: false,
-                    message: error || "Cette recherche ne correspond à aucun sujet informatique.",
-                    videos: [],
-                    documentations: []
-                };
-            }
+        const technologyFound = technologies.some(technology =>
+            normalizedQuery.includes(technology.name.toLowerCase())
+        );
 
-            // 2. Recherche de documentations
-            if (searchDocumentation) {
-                if (hasDocumentation && technologies && technologies.length > 0) {
-                    formattedDocs = technologies.map(doc => ({
-                        id: doc.id,
-                        title: doc.name,
-                        description: doc.description,
-                        level: "Documentation officielle",
-                        duration: null,
-                        source: "Documentation",
-                        popularity: null,
-                        ownerName: doc.name,
-                        ownerLogo: doc.logo,
-                        variant: 1,
-                        thumbnail: doc.logo,
-                        externalUrl: doc.officialDocumentation,
-                        resourceType: "Documentation officielle"
-                    }));
-                } else {
-                    message = "Ce sujet appartient à l'informatique mais aucune documentation officielle n'est actuellement disponible.";
-                    validTechnology = true;
-                }
-            }
-
-            // 3. Recherche YouTube
-            //  Même logique d'enrichissement que la recherche classique :
-            // si une techno connue correspond, on précise nom + catégorie
-            // pour réduire les résultats hors-sujet.
-            if (searchYoutube) {
-                let enrichedYoutubeQuery = youtubeQuery;
-
-                if (technologies && technologies.length > 0) {
-                    const matched = technologies[0];
-                    enrichedYoutubeQuery = `${matched.name} ${matched.category} ${youtubeQuery}`;
-                }
-
-                const searchVideos = await YoutubeService.searchVideos(enrichedYoutubeQuery);
-
-                if (searchVideos && searchVideos.length > 0) {
-                    const ids = searchVideos.map(video => video.id.videoId);
-                    const videos = await YoutubeService.getVideoDetails(ids);
-                    const rankedVideos = RecommendationService.rankVideos(videos, documentationQuery || youtubeQuery);
-
-                    formattedVideos = rankedVideos.map(item => ({
-                        id: item.video.id,
-                        title: item.video.snippet.title,
-                        description: item.video.snippet.description,
-                        level: "Tous niveaux",
-                        duration: item.video.contentDetails.duration,
-                        source: "YouTube",
-                        popularity: Math.round(item.sinovaScore * 100),
-                        ownerName: item.video.snippet.channelTitle,
-                        ownerLogo: "youtube",
-                        variant: 0,
-                        thumbnail: item.video.snippet.thumbnails.high.url,
-                        externalUrl: `https://www.youtube.com/watch?v=${item.video.id}`,
-                        resourceType: "Vidéo"
-                    }));
-                }
-            }
-
-            // 4. Gestion des cas particuliers
-            if (searchDocumentation && formattedDocs.length === 0 && formattedVideos.length > 0) {
-                message = "Aucune documentation officielle trouvée, mais des vidéos sont disponibles.";
-                validTechnology = true;
-            }
-
-            if (searchYoutube && formattedVideos.length === 0 && formattedDocs.length > 0) {
-                message = "Aucune vidéo trouvée, mais des documentations sont disponibles.";
-                validTechnology = true;
-            }
-
-            if (formattedDocs.length === 0 && formattedVideos.length === 0) {
-                if (searchDocumentation && !searchYoutube) {
-                    if (!message) {
-                        message = "Aucune documentation officielle n'est disponible pour ce sujet.";
-                    }
-                } else if (searchYoutube && !searchDocumentation) {
-                    message = "Aucune vidéo n'a été trouvée pour ce sujet.";
-                } else {
-                    message = "Aucune ressource n'a été trouvée pour ce sujet.";
-                }
-                success = false;
-            }
-
-            // 5. Résultat final
-            return {
-                success: success,
-                validTechnology: validTechnology,
-                message: message,
-                videos: formattedVideos,
-                documentations: formattedDocs
-            };
-
-        } catch (error) {
-            console.error("Erreur lors de la recherche personnalisée:", error);
-            return {
-                success: false,
-                validTechnology: false,
-                message: "Une erreur est survenue lors de la recherche personnalisée.",
-                videos: [],
-                documentations: []
-            };
+        if (technologyFound) {
+            return { isValid: true, message: "Technologie trouvée." };
         }
+    } catch (error) {
+        console.error("Erreur lors de la vérification des technologies:", error);
+    }
+
+    // Vérification dans la liste statique des concepts informatiques
+    const concepts = [
+        "array", "list", "tuple", "dictionary", "map", "set",
+        "stack", "queue", "tree", "binary tree", "graph",
+        "linked list", "hash table", "hashmap",
+        "class", "object", "interface", "inheritance",
+        "encapsulation", "polymorphism", "abstraction",
+        "algorithm", "algorithme", "sorting", "search",
+        "binary search", "recursion", "dynamic programming",
+        "greedy", "backtracking",
+        "variable", "constant", "function", "method",
+        "parameter", "argument", "loop", "for", "while",
+        "if", "else", "switch", "exception", "thread",
+        "process", "pointer", "reference", "memory",
+        "compiler", "interpreter", "syntax", "runtime",
+        "debugging", "bug",
+        "callback", "promise", "async", "await",
+        "closure", "event loop",
+        "frontend", "backend", "fullstack", "api", "rest",
+        "graphql", "http", "https", "json", "xml",
+        "cookie", "session", "jwt",
+        "database", "sql", "nosql", "transaction", "index",
+        "query", "join", "primary key", "foreign key",
+        "machine learning", "deep learning", "artificial intelligence",
+        "intelligence artificielle", "neural network",
+        "computer vision", "vision par ordinateur", "nlp",
+        "llm", "transformer", "embedding", "token",
+        "prompt engineering", "rag", "fine tuning",
+        "data science", "data analysis", "data analytics",
+        "big data", "feature engineering", "classification",
+        "regression", "clustering",
+        "cybersecurity", "cybersécurité", "ethical hacking",
+        "penetration testing", "encryption", "cryptography",
+        "firewall",
+        "network", "tcp", "udp", "dns", "ip", "socket", "port",
+        "devops", "ci/cd", "container", "virtual machine",
+        "uml", "design pattern", "architecture",
+        "software engineering", "génie logiciel",
+        "programmation", "développement", "informatique", "logiciel",
+        "programación", "desarrollo", "informática",
+        "برمجة", "البرمجة", "الذكاء الاصطناعي",
+        "تعلم الآلة", "علوم البيانات",
+        "difference between", "différence entre", "versus", "vs"
+    ];
+
+    const conceptFound = concepts.some(concept =>
+        normalizedQuery.includes(concept.toLowerCase())
+    );
+
+    if (conceptFound) {
+        return { isValid: true, message: "Concept informatique trouvé." };
+    }
+
+    // Aucun match - retour avec message de suggestion
+    return {
+        isValid: false,
+        message: `"${query}" n'est pas un sujet lié à l'informatique. SinovaAI se concentre sur les technologies informatiques comme : Python, JavaScript, React, Machine Learning, etc.`
+    };
+}
+
+/**
+ * Calcule le score d'engagement pur d'une vidéo (vues, likes, commentaires),
+ * SANS tenir compte d'une éventuelle requête de recherche. Utilisé quand on
+ * affiche une vidéo isolément (page détail), hors contexte de recherche.
+ * @param {Object} video - Objet vidéo YouTube (avec statistics)
+ * @returns {number} - Score entre 0 et 1
+ */
+function calculateEngagementScore(video) {
+    try {
+        const { statistics } = video;
+
+        if (!statistics) {
+            return 0;
+        }
+
+        const viewCount = parseInt(statistics.viewCount) || 0;
+        const likeCount = parseInt(statistics.likeCount) || 0;
+        const commentCount = parseInt(statistics.commentCount) || 0;
+
+        const totalEngagement = viewCount + likeCount + commentCount;
+        if (totalEngagement === 0) {
+            return 0;
+        }
+
+        const likeRatio = viewCount > 0 ? likeCount / viewCount : 0;
+        const commentRatio = viewCount > 0 ? commentCount / viewCount : 0;
+
+        let score = 0;
+        score += Math.min(viewCount / 1000000, 1) * 0.5;
+        score += Math.min(likeRatio * 10, 1) * 0.3;
+        score += Math.min(commentRatio * 20, 1) * 0.2;
+
+        if (viewCount < 100) {
+            score *= 0.5;
+        }
+
+        if (likeRatio > 0.05) {
+            score *= 1.1;
+        }
+
+        return Math.min(Math.max(score, 0), 1);
+
+    } catch (error) {
+        console.error("Erreur lors du calcul du score d'engagement:", error);
+        return 0;
     }
 }
 
-module.exports = new RessourceService();
+/**
+ * Calcule le score SES (Sinova Engagement Score) — engagement + bonus de
+ * pertinence si le titre/la description contient la requête de recherche.
+ * Utilisé lors du classement des résultats de recherche.
+ */
+function calculateSES(video, query) {
+    try {
+        const { snippet } = video;
+
+        let score = calculateEngagementScore(video);
+        if (score === 0) return 0;
+
+        const titleMatch = snippet?.title?.toLowerCase().includes(query.toLowerCase());
+        const descMatch = snippet?.description?.toLowerCase().includes(query.toLowerCase());
+
+        if (titleMatch || descMatch) {
+            score *= 1.1;
+        }
+
+        return Math.min(Math.max(score, 0), 1);
+
+    } catch (error) {
+        console.error("Erreur lors du calcul SES:", error);
+        return 0;
+    }
+}
+
+/**
+ * Calcule le score de pertinence d'une vidéo par rapport à une requête
+ */
+function calculatePertinence(video, query) {
+    try {
+        if (!video || !video.snippet) {
+            return 0;
+        }
+
+        const { title, description } = video.snippet;
+        const normalizedQuery = query.toLowerCase().trim();
+        const normalizedTitle = title?.toLowerCase() || '';
+        const normalizedDescription = description?.toLowerCase() || '';
+
+        const queryWords = normalizedQuery.split(/\s+/).filter(word => word.length > 2);
+
+        if (queryWords.length === 0) {
+            return 0.5;
+        }
+
+        let titleMatches = 0;
+        let descriptionMatches = 0;
+
+        for (const word of queryWords) {
+            if (normalizedTitle.includes(word)) {
+                titleMatches++;
+            }
+            if (normalizedDescription.includes(word)) {
+                descriptionMatches++;
+            }
+        }
+
+        const titleScore = queryWords.length > 0 ? titleMatches / queryWords.length : 0;
+        const descScore = queryWords.length > 0 ? descriptionMatches / queryWords.length : 0;
+
+        let score = (titleScore * 0.7) + (descScore * 0.3);
+
+        if (normalizedTitle.includes(normalizedQuery)) {
+            score += 0.3;
+        }
+
+        if (normalizedDescription.includes(normalizedQuery)) {
+            score += 0.1;
+        }
+
+        return Math.min(Math.max(score, 0), 1);
+
+    } catch (error) {
+        console.error("Erreur lors du calcul de pertinence:", error);
+        return 0;
+    }
+}
+
+/**
+ * Classe les vidéos par score combiné (SES + Pertinence)
+ */
+function rankVideos(videos, query) {
+    if (!Array.isArray(videos) || videos.length === 0) {
+        return [];
+    }
+
+    try {
+        const ranked = videos.map(video => {
+            const sesScore = calculateSES(video, query);
+            const pertinenceScore = calculatePertinence(video, query);
+            const sinovaScore = (pertinenceScore * 0.6) + (sesScore * 0.4);
+
+            return {
+                video,
+                sesScore,
+                pertinenceScore,
+                sinovaScore: Math.min(Math.max(sinovaScore, 0), 1)
+            };
+        });
+
+        return ranked.sort((a, b) => b.sinovaScore - a.sinovaScore);
+
+    } catch (error) {
+        console.error("Erreur lors du classement des vidéos:", error);
+        return [];
+    }
+}
+
+/**
+ * Personnalise la recherche en fonction des préférences utilisateur
+ */
+async function personalizeSearch(
+    query,
+    level,
+    objectives,
+    styles,
+    availability,
+    language
+) {
+    if (!query || !query.trim()) {
+        return {
+            youtubeQuery: '',
+            documentationQuery: '',
+            searchYoutube: false,
+            searchDocumentation: false,
+            isValidComputerScience: false,
+            hasDocumentation: false,
+            technologies: [],
+            error: 'Veuillez saisir un sujet de recherche.'
+        };
+    }
+
+    const trimmedQuery = query.trim();
+
+    // Vérification si le sujet est en informatique
+    const csCheck = await isComputerScienceQuery(trimmedQuery);
+    const isValidComputerScience = csCheck.isValid;
+
+    if (!isValidComputerScience) {
+        return {
+            youtubeQuery: '',
+            documentationQuery: '',
+            searchYoutube: false,
+            searchDocumentation: false,
+            isValidComputerScience: false,
+            hasDocumentation: false,
+            technologies: [],
+            error: csCheck.message || `"${trimmedQuery}" n'est pas un sujet lié à l'informatique.`
+        };
+    }
+
+    // Recherche des technologies correspondantes
+    const technologies = await DocumentationService.findTechnology(trimmedQuery);
+    const hasDocumentation = technologies.length > 0;
+
+    // Construction de la requête YouTube avec les filtres
+    let youtubeQuery = trimmedQuery;
+
+    if (objectives && Array.isArray(objectives) && objectives.length > 0) {
+        const objectiveKeywords = {
+            'Backend': 'backend programming',
+            'Frontend': 'frontend development',
+            'Data Science': 'data science',
+            'IA': 'machine learning artificial intelligence',
+            'Mobile': 'mobile development'
+        };
+
+        const objectiveTerms = objectives
+            .map(obj => objectiveKeywords[obj] || obj)
+            .filter(Boolean)
+            .join(' ');
+
+        if (objectiveTerms) {
+            youtubeQuery += ` ${objectiveTerms}`;
+        }
+    }
+
+    if (level) {
+        const levelMap = {
+            'Débutant': 'beginner tutorial',
+            'Intermédiaire': 'intermediate tutorial',
+            'Avancé': 'advanced tutorial'
+        };
+        youtubeQuery += ` ${levelMap[level] || level}`;
+    }
+
+    if (language === 'Français') {
+        youtubeQuery += ' french';
+    } else if (language === 'English') {
+        youtubeQuery += ' english';
+    }
+
+    const stylesArray = Array.isArray(styles) ? styles : [];
+
+    const searchYoutube = stylesArray.some(style =>
+        style === 'Vidéos' || style === 'Mixte' || style === 'Videos'
+    );
+    const searchDocumentation = stylesArray.some(style =>
+        style === 'Documentation' || style === 'Mixte'
+    );
+
+    return {
+        youtubeQuery: youtubeQuery.trim(),
+        documentationQuery: trimmedQuery,
+        searchYoutube: searchYoutube,
+        searchDocumentation: searchDocumentation,
+        isValidComputerScience: true,
+        hasDocumentation: hasDocumentation,
+        technologies: technologies,
+        error: null
+    };
+}
+
+module.exports = {
+    isComputerScienceQuery,
+    calculateEngagementScore, //  score sans requête, pour la page détail
+    calculateSES,
+    calculatePertinence,
+    rankVideos,
+    personalizeSearch
+};
